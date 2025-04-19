@@ -1,0 +1,12 @@
+{
+  "name": "autography_backend_beta_version",
+  "version": "1.0.0",
+  "description": "backend v1",
+  "type":"module",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Mr.Rana",
+  "license": "ISC"
+}
