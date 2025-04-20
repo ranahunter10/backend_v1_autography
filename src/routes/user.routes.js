@@ -1,33 +1,47 @@
 import { Router } from "express";
-import { 
-    loginUser, 
-    logoutUser, 
-    registerUser, 
-    refreshAccessToken, 
-    changeCurrentPassword, 
-    getCurrentUser, 
-    updateUserAvatar, 
+import {
+    loginUser,
+    logoutUser,
+    registerUser,
+    refreshAccessToken,
+    changeCurrentPassword,
+    getCurrentUser,
+    updateUserAvatar,
+    updateAccountDetails
 } from "../controllers/user.controller.js";
-import {upload} from "../middlewares/multer.middleware.js"
+import { upload } from "../middlewares/multer.middleware.js"
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 
 const router = Router()
 
-router.route("/register").post(
-    upload.fields([
-        {
-            name: "avatar",
-            maxCount: 1
+router.post("/register", 
+    (req, res, next) => {
+      // Handle both avatar and coverImage
+      upload.fields([
+        { name: 'avatar', maxCount: 1 },
+        { name: 'coverImage', maxCount: 1 }
+      ])(req, res, (err) => {
+        if (err) {
+          if (err.message.includes('Unexpected field')) {
+            return res.status(400).json({
+              success: false,
+              message: err.message
+            });
+          }
+          return next(err);
         }
-    ]),
+        next();
+      });
+    },
     registerUser
-    )
+  );
 
-router.route("/login").post(loginUser)
+router.route("/login").post(upload.none(), loginUser)
+
 
 //secured routes
-router.route("/logout").post(verifyJWT,  logoutUser)
+router.route("/logout").post(verifyJWT, logoutUser)
 router.route("/refresh-token").post(refreshAccessToken)
 router.route("/change-password").post(verifyJWT, changeCurrentPassword)
 router.route("/current-user").get(verifyJWT, getCurrentUser)
