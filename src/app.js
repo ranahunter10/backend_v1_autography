@@ -20,7 +20,8 @@ import userRouter from './routes/user.routes.js'
 
 //routes declaration
 app.use("/api/v1/users", userRouter)
-
+// admin routes declaration
+app.use("/api/v1/admin", userRouter)
 
 
 export { app }
