@@ -7,7 +7,7 @@ import {
 } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
-import mongoose from "mongoose";
+import transporter from "../utils/nodemailer.js";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -25,6 +25,94 @@ const generateAccessAndRefreshTokens = async (userId) => {
     );
   }
 };
+
+
+const emailVerificationOtp = asyncHandler(async (req, res) => {
+  try {
+    const userId = req.user?._id || req.body.userId;
+    if (!userId) {
+      throw new ApiError(400, "User ID not found");
+    }
+    const user = await User.findById(userId)
+
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+
+    if (user.isAccountVerified) {
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(200, {}, "Account already verified")
+        );
+    }
+    const OTP = String(Math.floor(100000 + Math.random() * 900000));
+
+    user.emailVerificationOtp = OTP;
+    user.emailVerificationOtpExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
+
+    await user.save();
+
+    const mailOptions = {
+      from: process.env.SENDER_EMAIL,
+      to: user.email,
+      subject: "Account Verification OTP",
+      text: `your Account Verification OTP is ${OTP}`
+    }
+
+    await transporter.sendMail(mailOptions);
+
+    return res
+      .status(201)
+      .json(
+        new ApiResponse(200, "verification otp sent on email ")
+      );
+
+  } catch (error) {
+    throw new ApiError(401, error?.message || "email verification error")
+  }
+
+});
+
+const verifyEmail = asyncHandler(async (req, res) => {
+  try {
+    const { userId, Otp } = req.body;
+
+    if (!userId || !Otp) {
+      throw new ApiError(400, "User ID and OTP are required");
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+
+
+    if (!user.emailVerificationOtp || user.emailVerificationOtp !== Otp) {
+      throw new ApiError(400, "Invalid OTP");
+    }
+
+    if (user.emailVerificationOtpExpiresAt < Date.now()) {
+      throw new ApiError(400, "OTP has expired");
+    }
+
+    user.isAccountVerified = true;
+    user.emailVerificationOtp = undefined;
+    user.emailVerificationOtpExpiresAt = undefined;
+
+    await user.save();
+
+    return res.status(200).json(
+      new ApiResponse(200, {}, "Email verified successfully")
+    );
+
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(500, error.message || "Email verification failed");
+  }
+});
 
 const registerUser = asyncHandler(async (req, res) => {
 
@@ -97,6 +185,16 @@ const registerUser = asyncHandler(async (req, res) => {
       "Something went wrong while registering the user"
     );
   }
+
+
+  const mailOptions = {
+    from: process.env.SENDER_EMAIL,
+    to: email,
+    subject: "welcome to Autography",
+    text: `your account has been created with email_id ${email}`
+  }
+
+  await transporter.sendMail(mailOptions);
 
   return res
     .status(201)
@@ -390,4 +488,6 @@ export {
   updateAccountDetails,
   updateUserAvatar,
   updateUserCoverImage,
+  emailVerificationOtp,
+  verifyEmail
 };

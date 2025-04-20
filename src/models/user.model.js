@@ -49,6 +49,27 @@ const userSchema = new Schema(
       type: String,
       required: [true, 'Password is required']
     },
+     
+    emailVerificationOtp:{
+      type:String,
+      default:""
+    },
+    emailVerificationOtpExpiresAt:{
+      type:Number,
+      default:0
+    },
+    emailresetOtp:{
+      type:String,
+      default:""
+    },
+    emailresetOtpExpiresAt:{
+      type:Number,
+      default:0
+    },
+    isAccountVerified:{
+      type:Boolean,
+      default:false
+    },
     refreshToken: {
       type: String
     }

@@ -7,10 +7,13 @@ import {
     changeCurrentPassword,
     getCurrentUser,
     updateUserAvatar,
-    updateAccountDetails
+    updateAccountDetails,
+    emailVerificationOtp,
+    verifyEmail
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js"
 import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { emailVerificationMiddleware } from "../middlewares/nodemailer.middleware.js";
 
 
 const router = Router()
@@ -47,6 +50,8 @@ router.route("/change-password").post(verifyJWT, changeCurrentPassword)
 router.route("/current-user").get(verifyJWT, getCurrentUser)
 router.route("/update-account").patch(verifyJWT, updateAccountDetails)
 router.route("/avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar)
+router.route("/send-verify-otp").post(emailVerificationMiddleware, emailVerificationOtp)
+router.route("/verify-account").post(emailVerificationMiddleware, verifyEmail)
 
 
 
