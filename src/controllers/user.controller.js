@@ -24,6 +24,98 @@ const generateAccessAndRefreshTokens = async (userId) => {
   }
 };
 
+const forgotPasswordResetOtp = asyncHandler(async (req,res)=>{
+
+     const email=req.body.email;
+
+     if(!email){
+      return new ApiError(400,"email is required")
+     }
+     try {
+      const user= await User.findOne({email});
+
+      if(!user){
+        return new ApiError(400,"user not found")
+      }
+
+      const OTP=user.createPasswordResetToken();
+
+      await user.save();
+
+      const mailOptions = {
+        from: process.env.SENDER_EMAIL,
+        to: user.email,
+        subject: "Password Reset OTP",
+        text: `your Password Reset OTP is ${OTP}`,
+      };
+  
+      await transporter.sendMail(mailOptions);
+  
+      return res
+        .status(201)
+        .json(new ApiResponse(200, "Password Reset otp sent on email "));
+      
+     } catch (error) {
+      console.error("Real error:", error);
+      throw new ApiError(400,"password reset error");
+     }
+});
+
+const forgotPasswordReset=asyncHandler(async(req,res)=>{
+    const {email,Otp,newPassword}=req.body;
+
+    if (
+      [email,Otp, newPassword].some((field) => field?.trim() === "")
+    ) {
+      throw new ApiError(400, "All fields are required");
+    }
+
+    try {
+      const user = await User.findOne({email}).select(
+        "+password +passwordResetToken +passwordResetExpires"
+      );
+      if (!user) {
+        throw new ApiError(404, "User not found");
+      }
+  
+      const hashedOtp = crypto.createHash("sha256").update(Otp).digest("hex");
+
+      const otpFromDb = user.passwordResetToken;
+
+      if (user.emailVerificationOtpExpiresAt < new Date()) {
+        throw new ApiError(400, "OTP has expired");
+      }
+  
+      if (!user.passwordResetToken || user.passwordResetToken !== hashedOtp) {
+        throw new ApiError(400, "Invalid OTP");
+      }
+
+      user.password=newPassword;
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+  
+      await user.save();
+  
+      const mailOptions = {
+        from: process.env.SENDER_EMAIL,
+        to: user.email,
+        subject: "welcome to Autography",
+        text: `your password has been  resetted successfully `,
+      };
+  
+      await transporter.sendMail(mailOptions);
+      return res
+        .status(200)
+        .json(new ApiResponse(200, {}, "password Reset successful"));
+
+      
+    } catch (error) {
+      console.log(error);
+      throw new ApiError(400,"password reset failed");
+    }
+
+});
+
 const verifyEmail = asyncHandler(async (req, res) => {
   try {
     const { userId, Otp } = req.body;
@@ -500,4 +592,6 @@ export {
   updateUserCoverImage,
   emailVerificationOtp,
   verifyEmail,
+  forgotPasswordResetOtp,
+  forgotPasswordReset
 };

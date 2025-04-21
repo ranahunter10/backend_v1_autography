@@ -9,7 +9,9 @@ import {
   updateUserAvatar,
   updateAccountDetails,
   emailVerificationOtp,
-  verifyEmail
+  verifyEmail,
+  forgotPasswordReset,
+  forgotPasswordResetOtp
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js"
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -41,6 +43,8 @@ userRouter.post("/register",
 );
 
 userRouter.route("/login").post(upload.none(), loginUser)
+userRouter.route("/password-reset-otp").post(forgotPasswordResetOtp);
+userRouter.route("/reset-password").post(forgotPasswordReset);
 
 
 //secured routes
@@ -50,7 +54,7 @@ userRouter.route("/change-password").post(verifyJWT, changeCurrentPassword)
 userRouter.route("/current-user").get(verifyJWT, getCurrentUser)
 userRouter.route("/update-account").patch(verifyJWT, updateAccountDetails)
 userRouter.route("/avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar)
-userRouter.route("/send-verify-otp").post(emailVerificationMiddleware, emailVerificationOtp)
+userRouter.route("/send-verification-otp").post(emailVerificationMiddleware, emailVerificationOtp)
 userRouter.route("/verify-account").post(emailVerificationMiddleware, verifyEmail)
 
 

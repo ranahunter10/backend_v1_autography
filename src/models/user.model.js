@@ -92,9 +92,7 @@ const userSchema = new Schema(
       minlength: [12, "Password must be at least 12 characters"],
       validate: {
         validator: function (v) {
-          return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$/.test(
-            v
-          );
+          return  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d])[\S]{12,}$/.test(v);
         },
         message:
           "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
@@ -359,7 +357,7 @@ userSchema.methods.generateRefreshToken = function () {
 };
 
 userSchema.methods.createPasswordResetToken = function () {
-  const resetToken = crypto.randomBytes(32).toString("hex");
+  const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
 
   this.passwordResetToken = crypto
     .createHash("sha256")
