@@ -1,12 +1,10 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
-import {
-  uploadOnCloudinary,
-  deleteOnCloudinary,
-} from "../utils/cloudinary.js";
+import { uploadOnCloudinary, deleteOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import transporter from "../utils/nodemailer.js";
 
 const generateAccessAndRefreshTokens = async (userId) => {
@@ -26,54 +24,6 @@ const generateAccessAndRefreshTokens = async (userId) => {
   }
 };
 
-
-const emailVerificationOtp = asyncHandler(async (req, res) => {
-  try {
-    const userId = req.user?._id || req.body.userId;
-    if (!userId) {
-      throw new ApiError(400, "User ID not found");
-    }
-    const user = await User.findById(userId)
-
-    if (!user) {
-      throw new ApiError(404, "User not found");
-    }
-
-    if (user.isAccountVerified) {
-      return res
-        .status(200)
-        .json(
-          new ApiResponse(200, {}, "Account already verified")
-        );
-    }
-    const OTP = String(Math.floor(100000 + Math.random() * 900000));
-
-    user.emailVerificationOtp = OTP;
-    user.emailVerificationOtpExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
-
-    await user.save();
-
-    const mailOptions = {
-      from: process.env.SENDER_EMAIL,
-      to: user.email,
-      subject: "Account Verification OTP",
-      text: `your Account Verification OTP is ${OTP}`
-    }
-
-    await transporter.sendMail(mailOptions);
-
-    return res
-      .status(201)
-      .json(
-        new ApiResponse(200, "verification otp sent on email ")
-      );
-
-  } catch (error) {
-    throw new ApiError(401, error?.message || "email verification error")
-  }
-
-});
-
 const verifyEmail = asyncHandler(async (req, res) => {
   try {
     const { userId, Otp } = req.body;
@@ -82,18 +32,28 @@ const verifyEmail = asyncHandler(async (req, res) => {
       throw new ApiError(400, "User ID and OTP are required");
     }
 
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).select(
+      "+emailVerificationOtp +emailVerificationOtpExpiresAt"
+    );
     if (!user) {
       throw new ApiError(404, "User not found");
     }
 
+    const hashedOtp = crypto.createHash("sha256").update(Otp).digest("hex");
 
-    if (!user.emailVerificationOtp || user.emailVerificationOtp !== Otp) {
-      throw new ApiError(400, "Invalid OTP");
+    // console.log("Raw OTP from request:", Otp);
+    // console.log("Stored OTP in DB:", user.emailVerificationOtp);
+    // console.log("OTP Expiry:", user.emailVerificationOtpExpiresAt);
+    // console.log("Current Time:", new Date());
+
+    const otpFromDb = user.emailVerificationOtp;
+
+    if (user.emailVerificationOtpExpiresAt < new Date()) {
+      throw new ApiError(400, "OTP has expired");
     }
 
-    if (user.emailVerificationOtpExpiresAt < Date.now()) {
-      throw new ApiError(400, "OTP has expired");
+    if (!user.emailVerificationOtp || user.emailVerificationOtp !== hashedOtp) {
+      throw new ApiError(400, "Invalid OTP");
     }
 
     user.isAccountVerified = true;
@@ -101,28 +61,67 @@ const verifyEmail = asyncHandler(async (req, res) => {
     user.emailVerificationOtpExpiresAt = undefined;
 
     await user.save();
-
-    return res.status(200).json(
-      new ApiResponse(200, {}, "Email verified successfully")
-    );
-
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Email verified successfully"));
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;
     }
+
     throw new ApiError(500, error.message || "Email verification failed");
   }
 });
 
-const registerUser = asyncHandler(async (req, res) => {
+const emailVerificationOtp = asyncHandler(async (req, res) => {
+  try {
+    const userId = req.user?._id || req.body.userId;
+    if (!userId) {
+      throw new ApiError(400, "User ID not found");
+    }
+    const user = await User.findById(userId);
 
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+
+    if (user.isAccountVerified) {
+      return res
+        .status(200)
+        .json(new ApiResponse(200, {}, "Account already verified"));
+    }
+    // const OTP = String(Math.floor(100000 + Math.random() * 900000));
+
+    const OTP = user.generateEmailVerificationOtp();
+
+    // user.emailVerificationOtp = OTP;
+    // user.emailVerificationOtpExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
+
+    await user.save();
+
+    const mailOptions = {
+      from: process.env.SENDER_EMAIL,
+      to: user.email,
+      subject: "Account Verification OTP",
+      text: `your Account Verification OTP is ${OTP}`,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    return res
+      .status(201)
+      .json(new ApiResponse(200, "verification otp sent on email "));
+  } catch (error) {
+    throw new ApiError(401, error?.message || "email verification error");
+  }
+});
+
+const registerUser = asyncHandler(async (req, res) => {
   const { fullName, email, username, password } = req.body;
   // console.log(req.body);
 
   if (
-    [fullName, email, username, password].some(
-      (field) => field?.trim() === ""
-    )
+    [fullName, email, username, password].some((field) => field?.trim() === "")
   ) {
     throw new ApiError(400, "All fields are required");
   }
@@ -180,46 +179,38 @@ const registerUser = asyncHandler(async (req, res) => {
   );
 
   if (!createdUser) {
-    throw new ApiError(
-      500,
-      "Something went wrong while registering the user"
-    );
+    throw new ApiError(500, "Something went wrong while registering the user");
   }
-
 
   const mailOptions = {
     from: process.env.SENDER_EMAIL,
     to: email,
     subject: "welcome to Autography",
-    text: `your account has been created with email_id ${email}`
-  }
+    text: `your account has been created with email_id ${email}`,
+  };
 
   await transporter.sendMail(mailOptions);
 
   return res
     .status(201)
-    .json(
-      new ApiResponse(200, createdUser, "User registered Successfully")
-    );
+    .json(new ApiResponse(200, createdUser, "User registered Successfully"));
 });
 
 const loginUser = asyncHandler(async (req, res) => {
 
-
-  // console.log('Login Request:', {
-  //   headers: req.headers,
-  //   body: req.body,
-  //   rawBody: req.rawBody
-  // });
   const { email, username, password } = req.body;
 
   if (!username && !email) {
     throw new ApiError(400, "username or email is required");
   }
 
+  // const user = await User.findOne({
+  //   $or: [{ username }, { email }],
+  // });
+
   const user = await User.findOne({
     $or: [{ username }, { email }],
-  });
+  }).select("+password");
 
   if (!user) {
     throw new ApiError(404, "User not exist");
@@ -266,7 +257,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     req.user._id,
     {
       $unset: {
-        refreshToken: 1, // this removes the field from document
+        refreshToken: 1, 
       },
     },
     {
@@ -315,8 +306,9 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       secure: true,
     };
 
-    const { accessToken, refreshToken } =
-      await generateAccessAndRefreshTokens(user._id);
+    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+      user._id
+    );
 
     return res
       .status(200)
@@ -381,9 +373,9 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     }
   ).select("-password");
 
-  res.status(200).json(
-    new ApiResponse(200, user, "Account details updated successfully")
-  );
+  res
+    .status(200)
+    .json(new ApiResponse(200, user, "Account details updated successfully"));
 });
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
@@ -424,11 +416,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(
-      new ApiResponse(
-        200,
-        updatedUser,
-        "Avatar image updated successfully"
-      )
+      new ApiResponse(200, updatedUser, "Avatar image updated successfully")
     );
 });
 
@@ -470,11 +458,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(
-      new ApiResponse(
-        200,
-        updatedUser,
-        "Cover image updated successfully"
-      )
+      new ApiResponse(200, updatedUser, "Cover image updated successfully")
     );
 });
 
@@ -489,5 +473,5 @@ export {
   updateUserAvatar,
   updateUserCoverImage,
   emailVerificationOtp,
-  verifyEmail
+  verifyEmail,
 };

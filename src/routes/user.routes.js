@@ -1,15 +1,15 @@
 import { Router } from "express";
 import {
-    loginUser,
-    logoutUser,
-    registerUser,
-    refreshAccessToken,
-    changeCurrentPassword,
-    getCurrentUser,
-    updateUserAvatar,
-    updateAccountDetails,
-    emailVerificationOtp,
-    verifyEmail
+  loginUser,
+  logoutUser,
+  registerUser,
+  refreshAccessToken,
+  changeCurrentPassword,
+  getCurrentUser,
+  updateUserAvatar,
+  updateAccountDetails,
+  emailVerificationOtp,
+  verifyEmail
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js"
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -18,27 +18,27 @@ import { emailVerificationMiddleware } from "../middlewares/nodemailer.middlewar
 
 const router = Router()
 
-router.post("/register", 
-    (req, res, next) => {
-      // Handle both avatar and coverImage
-      upload.fields([
-        { name: 'avatar', maxCount: 1 },
-        { name: 'coverImage', maxCount: 1 }
-      ])(req, res, (err) => {
-        if (err) {
-          if (err.message.includes('Unexpected field')) {
-            return res.status(400).json({
-              success: false,
-              message: err.message
-            });
-          }
-          return next(err);
+router.post("/register",
+  (req, res, next) => {
+    // Handle both avatar and coverImage
+    upload.fields([
+      { name: 'avatar', maxCount: 1 },
+      { name: 'coverImage', maxCount: 1 }
+    ])(req, res, (err) => {
+      if (err) {
+        if (err.message.includes('Unexpected field')) {
+          return res.status(400).json({
+            success: false,
+            message: err.message
+          });
         }
-        next();
-      });
-    },
-    registerUser
-  );
+        return next(err);
+      }
+      next();
+    });
+  },
+  registerUser
+);
 
 router.route("/login").post(upload.none(), loginUser)
 
