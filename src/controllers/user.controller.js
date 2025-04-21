@@ -210,16 +210,29 @@ const loginUser = asyncHandler(async (req, res) => {
 
   const user = await User.findOne({
     $or: [{ username }, { email }],
-  }).select("+password");
+  }).select("+password +loginAttempts +lockUntil");
 
   if (!user) {
     throw new ApiError(404, "User not exist");
   }
 
+  if (user.isLocked) {
+    throw new ApiError(423, "Account is temporarily locked. Try again later.");
+  }
+
+  if (user.lockUntil && user.lockUntil < Date.now()) {
+    await user.resetLoginAttempts();
+  }
+
   const isPasswordValid = await user.isPasswordCorrect(password);
 
   if (!isPasswordValid) {
+    await user.incrementLoginAttempts();
     throw new ApiError(401, "Invalid user credentials");
+  }
+
+  if (user.loginAttempts > 0 || user.lockUntil) {
+    await user.resetLoginAttempts();
   }
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
@@ -257,7 +270,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     req.user._id,
     {
       $unset: {
-        refreshToken: 1, 
+        refreshToken: 1,
       },
     },
     {

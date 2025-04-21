@@ -11,7 +11,7 @@ const storage = multer.diskStorage({
   }
 });
 
-// Enhanced configuration for registration
+
 export const upload = multer({
   storage: storage,
   fileFilter: (req, file, cb) => {
@@ -24,7 +24,7 @@ export const upload = multer({
   },
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB per file
-    files: 2 // Max 2 files total
+    files: 2 
   }
 });
 

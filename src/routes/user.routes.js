@@ -16,9 +16,9 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { emailVerificationMiddleware } from "../middlewares/nodemailer.middleware.js";
 
 
-const router = Router()
+const userRouter = Router()
 
-router.post("/register",
+userRouter.post("/register",
   (req, res, next) => {
     // Handle both avatar and coverImage
     upload.fields([
@@ -40,19 +40,18 @@ router.post("/register",
   registerUser
 );
 
-router.route("/login").post(upload.none(), loginUser)
+userRouter.route("/login").post(upload.none(), loginUser)
 
 
-//secured routes
-router.route("/logout").post(verifyJWT, logoutUser)
-router.route("/refresh-token").post(refreshAccessToken)
-router.route("/change-password").post(verifyJWT, changeCurrentPassword)
-router.route("/current-user").get(verifyJWT, getCurrentUser)
-router.route("/update-account").patch(verifyJWT, updateAccountDetails)
-router.route("/avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar)
-router.route("/send-verify-otp").post(emailVerificationMiddleware, emailVerificationOtp)
-router.route("/verify-account").post(emailVerificationMiddleware, verifyEmail)
+//secured routesuserRuserRouter.route("/logout").post(verifyJWT, logoutUser)
+userRouter.route("/refresh-token").post(refreshAccessToken)
+userRouter.route("/change-password").post(verifyJWT, changeCurrentPassword)
+userRouter.route("/current-user").get(verifyJWT, getCurrentUser)
+userRouter.route("/update-account").patch(verifyJWT, updateAccountDetails)
+userRouter.route("/avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar)
+userRouter.route("/send-verify-otp").post(emailVerificationMiddleware, emailVerificationOtp)
+userRouter.route("/verify-account").post(emailVerificationMiddleware, verifyEmail)
 
 
 
-export default router
+export default userRouter
