@@ -61,6 +61,15 @@ const verifyEmail = asyncHandler(async (req, res) => {
     user.emailVerificationOtpExpiresAt = undefined;
 
     await user.save();
+
+    const mailOptions = {
+      from: process.env.SENDER_EMAIL,
+      to: user.email,
+      subject: "welcome to Autography",
+      text: `your account has been successfully verified `,
+    };
+
+    await transporter.sendMail(mailOptions);
     return res
       .status(200)
       .json(new ApiResponse(200, {}, "Email verified successfully"));
@@ -117,7 +126,9 @@ const emailVerificationOtp = asyncHandler(async (req, res) => {
 });
 
 const registerUser = asyncHandler(async (req, res) => {
+
   const { fullName, email, username, password } = req.body;
+
   // console.log(req.body);
 
   if (
@@ -125,6 +136,8 @@ const registerUser = asyncHandler(async (req, res) => {
   ) {
     throw new ApiError(400, "All fields are required");
   }
+
+
 
   const existingUser = await User.findOne({
     $or: [{ username }, { email }],

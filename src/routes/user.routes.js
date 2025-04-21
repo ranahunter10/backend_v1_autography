@@ -43,7 +43,8 @@ userRouter.post("/register",
 userRouter.route("/login").post(upload.none(), loginUser)
 
 
-//secured routesuserRuserRouter.route("/logout").post(verifyJWT, logoutUser)
+//secured routes
+userRouter.route("/logout").post(verifyJWT, logoutUser)
 userRouter.route("/refresh-token").post(refreshAccessToken)
 userRouter.route("/change-password").post(verifyJWT, changeCurrentPassword)
 userRouter.route("/current-user").get(verifyJWT, getCurrentUser)
