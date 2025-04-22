@@ -481,6 +481,15 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     throw new ApiError(400, "All fields are required");
   }
 
+
+  const existingUser = await User.findById(req.user?._id);
+
+  if (!existingUser) {
+    throw new ApiError(404, "User not found");
+  }
+  
+  const isEmailChanged = existingUser.email !== email;
+
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
@@ -492,7 +501,16 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     {
       new: true,
     }
-  ).select("-password");
+  );
+
+  // console.log("hiii")
+
+  if (isEmailChanged) {
+    // console.log("i am here")
+    user.isAccountVerified = false;
+  }
+
+  await user.save();
 
   res
     .status(200)

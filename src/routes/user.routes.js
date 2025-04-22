@@ -7,6 +7,7 @@ import {
   changeCurrentPassword,
   getCurrentUser,
   updateUserAvatar,
+  updateUserCoverImage,
   updateAccountDetails,
   emailVerificationOtp,
   verifyEmail,
@@ -53,6 +54,7 @@ userRouter.route("/change-password").post(verifyJWT, changeCurrentPassword)
 userRouter.route("/current-user").get(verifyJWT, getCurrentUser)
 userRouter.route("/update-account").patch(verifyJWT, updateAccountDetails)
 userRouter.route("/avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar)
+userRouter.route("/coverImage").patch(verifyJWT, upload.single("coverImage"), updateUserCoverImage)
 userRouter.route("/send-verification-otp").post(verifyJWT, emailVerificationOtp)
 userRouter.route("/verify-account").post(verifyJWT, verifyEmail)
 
