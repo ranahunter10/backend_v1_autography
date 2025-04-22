@@ -14,8 +14,7 @@ import {
   forgotPasswordResetOtp
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js"
-import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { emailVerificationMiddleware } from "../middlewares/nodemailer.middleware.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js"; 
 
 
 const userRouter = Router()
@@ -54,8 +53,8 @@ userRouter.route("/change-password").post(verifyJWT, changeCurrentPassword)
 userRouter.route("/current-user").get(verifyJWT, getCurrentUser)
 userRouter.route("/update-account").patch(verifyJWT, updateAccountDetails)
 userRouter.route("/avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar)
-userRouter.route("/send-verification-otp").post(emailVerificationMiddleware, emailVerificationOtp)
-userRouter.route("/verify-account").post(emailVerificationMiddleware, verifyEmail)
+userRouter.route("/send-verification-otp").post(verifyJWT, emailVerificationOtp)
+userRouter.route("/verify-account").post(verifyJWT, verifyEmail)
 
 
 
