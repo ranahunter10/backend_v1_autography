@@ -16,12 +16,12 @@ export const upload = multer({
   storage: storage,
   fileFilter: (req, file, cb) => {
     // Explicitly allow only these fields
-    if (['avatar', 'coverImage'].includes(file.fieldname)) {
-      cb(null, true);
-    } else {
-      cb(new Error(`Unexpected field: ${file.fieldname}`), false);
-    }
-  },
+     if (['avatar', 'coverImage'].includes(file.fieldname)) {
+       cb(null, true);
+     } else {
+       cb(new Error(`Unexpected field: ${file.fieldname}`), false);
+     }
+   },
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB per file
     files: 2 

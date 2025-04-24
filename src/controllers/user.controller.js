@@ -239,10 +239,23 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(409, "User with email or username already exists");
   }
 
-  const avatarLocalPath = req.files?.avatar?.[0]?.path || req.file?.path;
+  // console.log(req.files);
+  // return ;
+
+  // const avatarLocalPath = req.files?.avatar?.[0]?.path || req.file?.path;
   // const coverImageLocalPath = req.files?.coverImage[0]?.path;
 
-  let coverImageLocalPath;
+  let avatarLocalPath=null;
+  if (
+    req.files &&
+    Array.isArray(req.files.avatar) &&
+    req.files.avatar.length > 0
+  ) {
+    avatarLocalPath = req.files.avatar[0].path;
+  }
+
+
+  let coverImageLocalPath=null;
   if (
     req.files &&
     Array.isArray(req.files.coverImage) &&
@@ -251,29 +264,42 @@ const registerUser = asyncHandler(async (req, res) => {
     coverImageLocalPath = req.files.coverImage[0].path;
   }
 
-  // console.log(avatarLocalPath,coverImageLocalPath)
 
-  if (!avatarLocalPath) {
-    throw new ApiError(400, "Avatar file is required .....");
-  }
+  // if (!avatarLocalPath) {
+  //   throw new ApiError(400, "Avatar file is required .....");
+  // }
 
-  const avatar = await uploadOnCloudinary(avatarLocalPath);
-  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+  // const avatar = await uploadOnCloudinary(avatarLocalPath);
+  // const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
-  if (!avatar) {
-    throw new ApiError(400, "Avatar file is required");
-  }
+  // if (!avatar) {
+  //   throw new ApiError(400, "Avatar file is required");
+  // }
+
+
+// const avatarLocalPath = req.files?.avatar?.[0]?.path || null;
+// const coverImageLocalPath = req.files?.coverImage?.[0]?.path || null;
+let avatar;
+let coverImage;
+
+if (avatarLocalPath) {
+  avatar = await uploadOnCloudinary(avatarLocalPath);
+}
+
+if (coverImageLocalPath) {
+  coverImage = await uploadOnCloudinary(coverImageLocalPath);
+}
 
   const user = await User.create({
     fullName,
-    avatar: {
+    avatar: avatar ?{
       public_id: avatar.public_id,
       url: avatar.secure_url,
-    },
-    coverImage: {
-      public_id: coverImage?.public_id || "",
-      url: coverImage?.secure_url || "",
-    },
+    }:null,
+    coverImage: coverImage ? {
+      public_id: coverImage?.public_id,
+      url: coverImage?.secure_url,
+    }:null,
     email,
     password,
     username: username.toLowerCase(),

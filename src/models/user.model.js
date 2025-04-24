@@ -59,18 +59,20 @@ const userSchema = new Schema(
       type: {
         public_id: {
           type: String,
-          required: [true, "Avatar public ID is required"],
+          // required: [true, "Avatar public ID is required"],
+          required: function() { return this.avatar != null; }
         },
         url: {
           type: String,
-          required: [true, "Avatar URL is required"],
+          // required: [true, "Avatar URL is required"],
+          required: function() { return this.avatar != null; },
           validate: {
             validator: validator.isURL,
             message: "Invalid avatar URL",
           },
         },
       },
-      required: [true, "Avatar is required"],
+      // required: [true, "Avatar is required"],
       _id: false,
     },
     coverImage: {
